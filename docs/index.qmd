@@ -145,7 +145,6 @@ covid_data <- covid_data |>
 
 QUESTION THREE 
 ```{r}
-
 library(flextable)
 library(dplyr)
 
@@ -168,26 +167,27 @@ covid_data <- covid_data %>%
     per_capita_new_deaths = RDEATH2021 / POPESTIMATE2021
   )
 
-ft <- flextable(top_cum_cases)
 top_cum_cases <- covid_data %>%
   arrange(desc(per_capita_cumulative_cases)) %>%
   slice_head(n = 5) %>%
   select("fips", CTYNAME, per_capita_cumulative_cases)
-  set_caption(ft, caption = "The Top counties Cumulative Cases")
+ft <- flextable(top_cum_cases)  
+ft <- set_caption(ft, caption = "The Top COVID-19 Cumulative Cases")
+
   
-  
-  
-ft <- flextable(top_new_cases)  
+
 top_new_cases <- covid_data %>%
   arrange(desc(per_capita_new_cases)) %>%
   slice_head( n = 5) %>%
   select("fips", CTYNAME, per_capita_new_cases)
-  set_caption(ft, caption = "The Top COVID-19 Cumulative Cases")
+ft <- flextable(top_new_cases)  
+ft <- set_caption(ft, caption = "The Top COVID-19 New Cases")
+
 
 head(top_cum_cases)
 
 ```
-  set_caption("Total cumulative covid cases")
+
   
 ```
 Now, explore the data … what attributes does it have, what are the names of the columns? Do any match the COVID data we have? What are the dimensions… In a few sentences describe the data obtained after modification:
