@@ -5,6 +5,8 @@ format: html
 author: 
  -name: Carson Bainbridge
  -email: carson.bainbridge@colostate.edu
+execute:
+  echo: true
 ---
 QUESTION ONE/ LOAD IN DATA & SET-UP
 ```{r}
