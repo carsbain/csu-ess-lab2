@@ -143,10 +143,10 @@ covid_data <- covid_data |>
   inner_join(pop, by = "fips")
 ```
 
+QUESTION THREE 
 ```{r}
 
-#question 3 
-
+library(flextable)
 library(dplyr)
 
 url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
@@ -168,16 +168,21 @@ covid_data <- covid_data %>%
     per_capita_new_deaths = RDEATH2021 / POPESTIMATE2021
   )
 
+ft <- flextable(top_cum_cases)
 top_cum_cases <- covid_data %>%
   arrange(desc(per_capita_cumulative_cases)) %>%
   slice_head(n = 5) %>%
   select("fips", CTYNAME, per_capita_cumulative_cases)
+  set_caption(ft, caption = "The Top counties Cumulative Cases")
   
   
+  
+ft <- flextable(top_new_cases)  
 top_new_cases <- covid_data %>%
   arrange(desc(per_capita_new_cases)) %>%
   slice_head( n = 5) %>%
   select("fips", CTYNAME, per_capita_new_cases)
+  set_caption(ft, caption = "The Top COVID-19 Cumulative Cases")
 
 head(top_cum_cases)
 
@@ -239,7 +244,6 @@ ggplot(covid_death_toll) +
 
 
 QUESTION SIX 
-***** check names !!!****
 ```{r}
 library(dplyr)
 library(tidyverse)
