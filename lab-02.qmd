@@ -1,0 +1,386 @@
+---
+title: "Lab 3: COVID-19"
+subtitle: 'ESS 330'
+format: html
+author: 
+ -name: Carson Bainbridge
+ -email: carson.bainbridge@colostate.edu
+---
+QUESTION ONE/ LOAD IN DATA & SET-UP
+```{r}
+library(flextable)
+library(zoo)
+library(tidyverse)
+
+```
+QUESTION TWO 
+```{r}
+
+url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+
+covid_data = read_csv(url)
+  show_col_types = FALSE
+
+```
+
+```{r}
+#Step 2
+txt <- "2022-02-01"
+class(txt)
+
+date_example <- as.Date(txt)
+class(date_example)
+```
+```{r}
+my.date <- as.Date("2022-02-01")
+my.state <- "Colorado"
+```
+
+```{r}
+#step 3 
+ colorado <- covid_data |>
+  filter(state == my.state) |>
+  group_by(county) |>
+  arrange(date) |>
+  mutate(new_cases = cases - lag(cases),
+          new_deaths = deaths - lag(deaths)
+          ) |>
+  ungroup()
+```
+
+```{r}
+#Step 4
+filter(colorado, date == my.date) |>
+  slice_max(cases, n=5) |>
+  select (Date = date, County = county, Cases = cases) |>
+  flextable() |>
+  set_caption (caption = "Most Total Cases")
+
+filter(colorado, date == my.date) |>
+  slice_max(cases, n = 5) |>
+  select(Date = date, County = county, Cases = new_cases) |>
+  flextable () |>
+  set_caption (caption = "Most New Cases ")
+
+```
+
+QUESTION THREE
+```{r}
+#step one 
+library(tidyverse)
+library(dplyr)
+pop_url <- 'https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv'
+```
+
+
+```{r}
+library(tidyverse)
+pop <- read_csv("https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv", show_col_types = FALSE)  
+
+pop <- pop %>%
+  mutate(
+    STATE = as.numeric(STATE),
+    COUNTY = as.numeric(COUNTY))
+
+pop <- pop %>%
+  mutate(
+    STATE = sprintf("%02d", STATE),
+    COUNTY = sprintf("%03d", COUNTY),
+    FIP = paste0(STATE, COUNTY)
+  )
+
+pop <- pop %>%
+  select(matches("NAME|2021"), FIP)
+
+
+pop <- pop %>%
+  filter("COUNTY" != "000")
+
+head(pop)
+```
+```{r}
+class(pop)
+```
+
+```{r}
+#names(), dim(), nrow(), str(), glimpse, skimr
+```
+
+```{r}
+names(pop)
+dim(pop)
+nrow(pop)
+str(pop)
+glimpse(pop)
+```
+The data after modification has been altered to include a FIP column, but most importantly it modified each variable to be for 2021 only. The names were modified, as well as the data inlcuded within. 
+```{r}
+range(pop$POPESTIMATE2021, na.rm = TRUE)
+```
+
+```{r}
+covid_data <- covid_data %>%
+  mutate(fips = as.character(fips))
+
+```
+
+
+
+```{r}
+#joining colorado covid data to pop dataframe 
+url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+covid_data = read_csv(url)
+pop <- read_csv("https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv", show_col_types = FALSE) %>% 
+  filter(COUNTY != "000") %>% 
+  mutate(fips = paste0(STATE, COUNTY) )
+
+covid_data <- covid_data |>
+  filter(state == "Colorado")
+
+covid_data <- covid_data |> 
+  inner_join(pop, by = "fips")
+```
+
+```{r}
+
+#question 3 
+
+library(dplyr)
+
+url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+covid_data = read_csv(url)
+pop <- read_csv("https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv", show_col_types = FALSE) %>% 
+  filter(COUNTY != "000") %>% 
+  mutate(fips = paste0(STATE, COUNTY) )
+
+covid_data <- covid_data |>
+  filter(state == "Colorado")
+
+covid_data <- covid_data |> 
+  inner_join(pop, by = "fips")
+  
+covid_data <- covid_data %>%
+  mutate(
+    per_capita_cumulative_cases = (DEATHS2021 + BIRTHS2021) / POPESTIMATE2021,
+    per_capita_new_cases = NPOPCHG2021 / POPESTIMATE2021,
+    per_capita_new_deaths = RDEATH2021 / POPESTIMATE2021
+  )
+
+top_cum_cases <- covid_data %>%
+  arrange(desc(per_capita_cumulative_cases)) %>%
+  slice_head(n = 5) %>%
+  select("fips", CTYNAME, per_capita_cumulative_cases)
+  
+  
+top_new_cases <- covid_data %>%
+  arrange(desc(per_capita_new_cases)) %>%
+  slice_head( n = 5) %>%
+  select("fips", CTYNAME, per_capita_new_cases)
+
+head(top_cum_cases)
+
+```
+  set_caption("Total cumulative covid cases")
+  
+```
+Now, explore the data … what attributes does it have, what are the names of the columns? Do any match the COVID data we have? What are the dimensions… In a few sentences describe the data obtained after modification:
+- after modification, the data  has been altered to include a FIP column, but most importantly it modified each variable to be for 2021 only. The names were modified, as well as the data points inlcuded within. 
+
+
+Question FOUR
+```{r}  
+covid_data <- covid_data 
+  latest_date <- max(covid_data$date, na.rm = TRUE)
+  start_date <- latest_date - 14
+
+last_14_days_data <- covid_data %>%
+  inner_join(pop, by = "fips")
+
+county_new_cases <- last_14_days_data %>%
+  group_by(county) %>%
+  summarize(
+    new_cases_per_100000 = sum(per_capita_new_cases / POPESTIMATE2023.x) *100000
+  )
+
+top_5_counties <- county_new_cases %>%
+  arrange(desc(new_cases_per_100000)) %>%
+head(5)
+print(top_5_counties)
+```
+
+```{r}
+#watch list 
+watch_list <- sum(county_new_cases$new_cases_per_100000> 100)
+print(watch_list)
+```
+-The number of counties that meet the watch list conditions is 13. The top 5 counties in the last 14 days are Mineral, San Juan, Custer, Costilla, Ouray. 
+
+QUESTION FIVE
+#For this question, you will find the ratio of total COVID deaths per county (2021) of all recorded deaths. In a plot of your choosing, visualize all counties where COVID deaths account for 20% or more of the annual death toll.
+```{r}
+library(ggplot2)
+covid_death_toll <- colorado %>%
+  mutate(year = lubridate::year(date)) %>%
+  filter(year == 2021) %>%
+  group_by(fips) %>%
+  summarise(deaths = sum(new_deaths, na.rm = TRUE)) %>%
+  left_join(pop, by = c("fips"))%>%
+  mutate(death_ratio = (deaths / DEATHS2021) * 100) %>%
+select(deaths, CTYNAME,  DEATHS2021, death_ratio) %>%
+  filter (death_ratio > 20)
+
+ggplot(covid_death_toll) +
+  geom_col(aes(x = death_ratio, y = CTYNAME)) +
+  theme_minimal() 
+
+```
+
+
+QUESTION SIX 
+***** check names !!!****
+```{r}
+library(dplyr)
+library(tidyverse)
+url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+
+covid_data = read_csv(url)
+  show_col_types = FALSE
+  
+  
+library(zoo)
+library(tidyverse)
+library(tidyr)
+
+state_covid = covid_data %>%
+  group_by(date, state) %>%
+  summarise(cases = sum(cases)) %>%
+  filter(state %in% c("New York", "Ohio", "Colorado", "Alabama")) %>%
+  group_by(state) %>%
+  mutate(newCases = cases - lag(cases), 
+          roll = zoo::rollmean(newCases, k = 7, align = "right", fill = NA)) %>%
+  ungroup()
+```
+
+
+```{r}
+library(ggplot2)
+
+ggplot(state_covid, aes(x = date)) +
+  geom_col(aes(y = newCases), fill = "pink", col = NA) +
+  geom_line(aes(y = roll), col = "darkred", size = 1) +
+  theme_linedraw() +
+  facet_wrap(~state, nrow = 2, scales = "free_y") +
+  labs(title = "Cumulative COVID-19 Cases", 
+       x = "Date", y = "Case Count")
+```
+
+```{r}
+pop <- read_csv("https://www2.census.gov/programs-surveys/popest/datasets/2020-2023/counties/totals/co-est2023-alldata.csv", show_col_types = FALSE) 
+  
+pp = pop %>%
+  group_by(STNAME) |>
+  summarise(state_pop = sum(POPESTIMATE2021)) |>
+  inner_join(state_covid, by = c("STNAME" = "state")) %>%
+  mutate(perCap = newCases / state_pop) %>%
+  group_by("STNAME") %>%
+  mutate(roll = zoo::rollmean(perCap, k = 7, align = "right", fill = NA)) %>%
+  ungroup()
+
+```
+
+
+```{r}
+ggplot(pp, aes(x = "date")) + 
+geom_line(aes(y = roll, col = STNAME), size = 2) +
+   theme_linedraw() +
+   labs(title = "Cumulative COVID-19 Cases", 
+        x= "Date", y = "Case Count")
+
+```
+
+Briefly describe the influence scaling by population had on the analysis? Does it make some states look better? Some worse? How so?
+-scaling the populations made New York look like the worst cases. It shows the data more detailed and helps to show us how Ohio compares to New York, with these being the highest cases count. I can see the scale on each of these and how these two are significiantly higher than the other states. 
+
+QUESTION SEVEN 
+
+```{r}
+meta = read_csv('https://raw.githubusercontent.com/mikejohnson51/csu-ess-330/refs/heads/main/resources/county-centroids.csv') %>%
+  inner_join(covid_data) %>%
+  group_by(date) %>%
+  summarise(wmX_c = sum(LON*cases) / sum(cases), 
+            wmY_c = sum(LAT*cases) / sum(cases), 
+            cases = sum(cases)) %>%
+  arrange(date) %>%
+  mutate(d = 1:n())
+  
+ggplot(meta) +
+  borders("state", fill = "gray", colour = "white") +
+  geom_point(aes(x = wmX_c, y = wmY_c, size = cases), 
+             color = "red", alpha = .25) +
+  theme_linedraw()
+  labs(color = "Time", 
+       size = "Cases", 
+       x= "", y = "", 
+       title = "Weighted Center of COVID-19 Cases") +
+  theme(legend.position = "none")
+```
+In a few sentences, describe the movement of the COVID-19 weighted mean throughout the USA and possible drivers of its movement given your knowledge of the outbreak hot spots.
+-The movement of COVID-19 data is spread through central US mostly, but is very highly concentrated in Missouri and Arkansas. The possible drivers to this concentration in the south is potential for lowered vaccination rates, and more social gathering occuring in this part of the country. It is interesting how concentrated it is in the south, and how there is only dataset in the west. 
+
+QUESTION EIGHT(EXTRACREDIT)
+
+```{r}
+library(dplyr)
+library(patchwork)
+library(readr)
+
+meta = read_csv('https://raw.githubusercontent.com/mikejohnson51/csu-ess-330/refs/heads/main/resources/county-centroids.csv') %>%
+  inner_join(covid_data) %>%
+  group_by(date) %>%
+  summarise(wmX_c = sum(LON*cases) / sum(cases), 
+            wmY_c = sum(LAT*cases) / sum(cases), 
+            cases = sum(cases)) %>%
+  arrange(date) %>%
+  mutate(d = 1:n())
+print(meta)
+
+wm_cases <- covid_data %>%
+  group_by(date) %>%
+  summarise(
+  wm_c = sum(as.numeric(fips) * cases, na.rm = TRUE) / sum(cases, na.rm = TRUE), 
+  cases = sum(cases, na.rm = TRUE)
+  ) %>%
+  arrange(date)
+
+wm_deaths <- covid_data %>%
+  group_by(date) %>%
+  summarise(
+  wm_d = sum(as.numeric(fips) * deaths, na.rm = TRUE) / sum(deaths, na.rm = TRUE), 
+  deaths = sum(deaths, na.rm = TRUE)
+  ) %>%
+  arrange(date)
+  
+plot_one <- ggplot(wm_cases, aes(x = "date", y = "wmFIPS_c", size = cases)) +
+  geom_point(color = "red", alpha = 0.6) + 
+  theme_minimal() +
+  labs(title= "Weighted COVID-19 Cases", 
+       x= "Date", y = "Weighted FIPS", size = "Cases") +
+  theme(legend.position = "bottom")
+  
+print(plot_one)
+
+plot_two <- ggplot(wm_deaths, aes(x = "date", y = "wmFIPS_d", size = deaths)) +
+  geom_point(color = "navy", alpha = 0.7) +
+  theme_minimal() +
+  labs(title = "Weighted COVID-19 Deaths ",
+       x = "Date", y = "Weighted FIPS", size = "Deaths") +
+  theme(legend.position = "bottom")
+  
+print(plot_two)
+  
+plot_one + plot_two
+```
+instructions: Once completed describe the differences in the plots and what they mean about the spatial patterns seen with COVID impacts.
+
+- The differences in the plots is 
+
